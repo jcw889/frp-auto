@@ -9,6 +9,12 @@ fi
 # 安装依赖
 apt update && apt install -y wget unzip curl
 
+# 交互式设置安装目录
+read -p "请输入FRP安装目录 [默认: /root/frp]: " INSTALL_DIR
+INSTALL_DIR=${INSTALL_DIR:-/root/frp}
+mkdir -p "$INSTALL_DIR"
+cd "$INSTALL_DIR" || exit
+
 # 获取公网IP（自动检测IPv4/IPv6）
 PUBLIC_IP=$(curl -s icanhazip.com)
 if [[ $PUBLIC_IP == *":"* ]]; then
@@ -64,19 +70,18 @@ systemctl daemon-reload
 systemctl enable frps
 systemctl start frps
 
-# 创建全局快捷命令 `frp`
-cat > /usr/local/bin/frp <<'EOF'
+# 创建全局快捷命令 frp
+cat > /usr/local/bin/frp <<EOF
 #!/bin/bash
-FRP_DIR="$(pwd)"
-CONFIG_FILE="${FRP_DIR}/frps.ini"
-LOG_FILE="${FRP_DIR}/frps.log"
+CONFIG_FILE="$(pwd)/frps.ini"
+LOG_FILE="$(pwd)/frps.log"
 
-case "$1" in
+case "\$1" in
     -k)
         systemctl status frps
         ;;
     -pz)
-        cat "$CONFIG_FILE"
+        cat "\$CONFIG_FILE"
         ;;
     -xz)
         echo "正在卸载FRP..."
@@ -84,8 +89,7 @@ case "$1" in
         systemctl disable frps
         rm -f /etc/systemd/system/frps.service
         systemctl daemon-reload
-        rm -rf "${FRP_DIR}" frp.tar.gz
-        rm -f /usr/local/bin/frp
+        rm -rf "$INSTALL_DIR" /usr/local/bin/frp
         sed -i '/alias frp/d' /root/.bashrc
         echo "FRP 已完全卸载！"
         ;;
@@ -101,7 +105,7 @@ EOF
 
 chmod +x /usr/local/bin/frp
 
-# 添加别名到 .bashrc（兼容旧习惯）
+# 添加别名到 .bashrc（兼容性优化）
 echo "alias frp-k='frp -k'" >> /root/.bashrc
 echo "alias frp-pz='frp -pz'" >> /root/.bashrc
 echo "alias frp-xz='frp -xz'" >> /root/.bashrc
@@ -110,6 +114,7 @@ source /root/.bashrc
 # 输出配置信息
 echo "----------------------------------------"
 echo "FRP服务端已启动！"
+echo "安装目录: $(pwd)"
 echo "公网地址: ${PUBLIC_IP}"
 echo "服务端端口: ${BIND_PORT}"
 echo "Token: ${TOKEN}"
@@ -128,22 +133,8 @@ local_port = 22
 remote_port = 6000
 EOF
 echo "----------------------------------------"
-echo "快捷命令已安装:"
-echo "1. frp -k    # 查看服务状态"
-echo "2. frp -pz   # 查看配置文件"
-echo "3. frp -xz   # 卸载FRP服务"
+echo "快捷命令:"
+echo "frp -k    # 查看状态"
+echo "frp -pz   # 查看配置"
+echo "frp -xz   # 卸载服务"
 echo "----------------------------------------"
-touch ~/.bashrc
-
-# 将 frp 命令和别名写入配置文件
-cat >> ~/.bashrc <<'EOF'
-
-# FRP 快捷命令
-export PATH=$PATH:/usr/local/bin
-alias frp-k='frp -k'
-alias frp-pz='frp -pz'
-alias frp-xz='frp -xz'
-EOF
-
-# 立即生效
-source ~/.bashrc
