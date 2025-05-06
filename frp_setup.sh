@@ -133,3 +133,17 @@ echo "1. frp -k    # 查看服务状态"
 echo "2. frp -pz   # 查看配置文件"
 echo "3. frp -xz   # 卸载FRP服务"
 echo "----------------------------------------"
+touch ~/.bashrc
+
+# 将 frp 命令和别名写入配置文件
+cat >> ~/.bashrc <<'EOF'
+
+# FRP 快捷命令
+export PATH=$PATH:/usr/local/bin
+alias frp-k='frp -k'
+alias frp-pz='frp -pz'
+alias frp-xz='frp -xz'
+EOF
+
+# 立即生效
+source ~/.bashrc
